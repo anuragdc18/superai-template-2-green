@@ -4,6 +4,7 @@ import { waLink } from "../lib/site";
 import { fillTokens, telHref, useSite } from "../queries/site";
 import { WaIcon } from "./header";
 import { ChatPanel } from "./chat-panel";
+import { useContent } from "../queries/content";
 import { OPEN_CHAT_EVENT } from "../lib/chat-bus";
 
 export function FloatingActions() {
@@ -12,6 +13,7 @@ export function FloatingActions() {
   const [hint, setHint] = useState(false);
   const [initial, setInitial] = useState<{ text: string; n: number } | null>(null);
   const bot = site.bot;
+  const showWa = useContent().whatsapp.showButton;
   const wa = waLink(site.whatsapp, fillTokens(bot.whatsappMessage, { business: site.siteName, name: "", phone: site.phone }));
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export function FloatingActions() {
   return (
     <>
       {/* WhatsApp — bottom left */}
+      {showWa && (
       <a
         href={wa}
         target="_blank"
@@ -43,6 +46,7 @@ export function FloatingActions() {
         <WaIcon className="h-7 w-7" />
         <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-wa/40" />
       </a>
+      )}
 
       {/* Chatbot — bottom right */}
       {bot.enabled && chat && <ChatPanel onClose={() => setChat(false)} initial={initial} />}

@@ -30,6 +30,8 @@ import type { LucideIcon } from "lucide-react";
 import { CATEGORIES, POPULAR, SLIDES, serviceUrl, waLink } from "../lib/site";
 import { telHref, useSite } from "../queries/site";
 import { openChat } from "../lib/chat-bus";
+import { useContent } from "../queries/content";
+import { PostCard } from "../components/content-ui";
 
 /** Icon + colour for each category (same order as CATEGORIES). */
 const CAT_STYLE: Record<string, { icon: LucideIcon; fg: string; bg: string; chat: string }> = {
@@ -331,16 +333,11 @@ const WHY: { icon: LucideIcon; title: string; text: string; fg: string; bg: stri
   { icon: Headphones, title: "Real experts", text: "CA, CS and design experts guide you at every step.", fg: "#f59e0b", bg: "#fef3e1" },
 ];
 
-const REVIEWS = [
-  { name: "Ravi K.", city: "Hyderabad", text: "My GST and company registration were done in a week. Very smooth, and they explained everything simply." },
-  { name: "Priya S.", city: "Bengaluru", text: "They designed our logo and website together. Looks very professional and customers notice it." },
-  { name: "Arjun M.", city: "Pune", text: "Our Instagram enquiries doubled in 2 months. The team posts on time every week." },
-];
 
-function Stars() {
+function Stars({ n = 5 }: { n?: number }) {
   return (
     <span className="flex text-[#f59e0b]">
-      {[0, 1, 2, 3, 4].map((k) => (
+      {Array.from({ length: n }, (_, k) => k).map((k) => (
         <Star key={k} className="h-4 w-4 fill-current" strokeWidth={1.5} />
       ))}
     </span>
@@ -349,6 +346,9 @@ function Stars() {
 
 function Trust() {
   const site = useSite();
+  const content = useContent();
+  const rs = content.reviewsSection;
+  const REVIEWS = rs.show ? content.reviews.slice(0, 3) : [];
   return (
     <section className="bg-mint pb-[72px] pt-[72px] sm:pb-[75px] sm:pt-[85px]">
       <div className="container-x">
@@ -365,42 +365,41 @@ function Trust() {
           ))}
         </div>
 
+        {REVIEWS.length > 0 && <>
         <div className="mb-6 mt-[64px] flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-[26px] font-semibold">What Our Clients Say</h3>
-          <span className="flex items-center gap-2 text-[15px] font-semibold text-ink">
-            <Stars /> 4.8 on Google
-          </span>
+          {rs.rating && (
+            <a href={rs.googleUrl || undefined} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+              <Stars /> {rs.rating} on Google{rs.ratingCount ? ` (${rs.ratingCount})` : ""}
+            </a>
+          )}
         </div>
         <div className="grid gap-5 md:grid-cols-3">
           {REVIEWS.map((r) => (
-            <figure key={r.name} className="card-wa p-6">
-              <Stars />
+            <figure key={r.id} className="card-wa p-6">
+              <Stars n={r.rating} />
               <blockquote className="mt-3 text-[16.5px] leading-[1.6] text-ink">"{r.text}"</blockquote>
               <figcaption className="mt-4 flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-brand text-[16px] font-bold text-ink">{r.name[0]}</span>
                 <span className="leading-tight">
                   <span className="block text-[16px] font-semibold text-ink">{r.name}</span>
-                  <span className="mt-1 block text-[13px]">{r.city}</span>
+                  <span className="mt-1 block text-[13px]">{r.place}</span>
                 </span>
               </figcaption>
             </figure>
           ))}
         </div>
+        </>}
       </div>
     </section>
   );
 }
 
-const FAQS = [
-  { q: "Do I need to visit your office?", a: "No. Everything is done online. You can share documents on WhatsApp or email." },
-  { q: "How long does GST registration take?", a: "Usually 3 to 7 working days, once we have all your documents." },
-  { q: "Can you do registration and the website together?", a: "Yes. Many clients start with registration and logo, then add a website. We offer combo prices." },
-  { q: "How do I pay?", a: "You can pay by UPI, debit/credit card or bank transfer. You get a proper GST invoice." },
-  { q: "I'm not sure which registration I need. Can you help?", a: "Yes — that's what the free consultation is for. Our expert will suggest the right option for you." },
-];
 
 function Faq() {
   const [open, setOpen] = useState<number | null>(0);
+  const FAQS = useContent().faqs;
+  if (!FAQS.length) return null;
   return (
     <section className="bg-surface pb-[64px] pt-[72px] sm:pb-[72px] sm:pt-[80px]">
       <div className="container-x"><div className="mx-auto max-w-[720px]">
@@ -409,7 +408,7 @@ function Faq() {
           {FAQS.map((f, i) => {
             const isOpen = open === i;
             return (
-              <div key={f.q} className="card-wa">
+              <div key={f.id} className="card-wa">
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
                   className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left text-[17px] font-semibold text-ink"
@@ -430,6 +429,28 @@ function Faq() {
           })}
         </div>
       </div></div>
+    </section>
+  );
+}
+
+function LatestPosts() {
+  const content = useContent();
+  if (!content.blog.show || !content.posts.length) return null;
+  return (
+    <section className="bg-white pb-[64px] pt-[72px] sm:pb-[72px] sm:pt-[80px]">
+      <div className="container-x">
+        <SectionHead eyebrow={content.blog.title || "Blog"} title="Tips & Guides" />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {content.posts.slice(0, 3).map((p) => (
+            <PostCard key={p.id} p={p} />
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <Link to="/blog" className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-royal hover:gap-2.5">
+            See all articles <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
     </section>
   );
 }
@@ -469,6 +490,7 @@ export default function Index() {
       <Popular />
       <Process />
       <Trust />
+      <LatestPosts />
       <Faq />
       <CtaBand />
     </>
